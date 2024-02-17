@@ -33,13 +33,14 @@ const userSchema = new mongoose.Schema({
 const User = mongoose.model('User', userSchema);
 
 // Update the server response in /api/register and /api/login routes
+const bcrypt = require('bcrypt');
 
 app.post('/api/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
 
-    if (user && user.password === password) {
+    if (user && bcrypt.compareSync(password, user.password)) {
       res.json({ success: true, message: `Hello, ${user.name}! Welcome back.`, user }); // Include user data
     } else {
       res.json({ success: false, message: 'Invalid Credentials. Try Again!' });
@@ -50,9 +51,18 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+
 app.post('/api/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
+
+    // Check if the email already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.json({ success: false, message: 'Email already exists. Please use a different email.' });
+    }
+
+    // Create a new user
     const newUser = new User({ name, email, password });
     await newUser.save();
 
@@ -63,6 +73,7 @@ app.post('/api/register', async (req, res) => {
     res.status(500).json({ success: false, message: 'Internal Server Error' });
   }
 });
+
 
 
 // Define the route for updating the task status before the route for fetching tasks
